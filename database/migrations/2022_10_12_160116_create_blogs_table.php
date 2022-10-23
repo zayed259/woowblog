@@ -17,8 +17,8 @@ return new class extends Migration
             $table->id();
             $table->bigInteger('user_id')->unsigned();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->string('title');
-            $table->text('body');
+            $table->text('body', '5000')->nullable();
+            $table->string('image')->nullable();
             $table->set('ishide',['1','0'])->default('1')->comment('0=hide,1=show');
             $table->softDeletes();
             $table->timestamps();

@@ -25,8 +25,8 @@ class UpdateBlogRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => 'required|string|max:255',
-            'body' => 'required|string',
+            'body' => 'string',
+            'image' => 'image',
         ];
     }
 }

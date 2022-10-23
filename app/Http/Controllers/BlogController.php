@@ -7,6 +7,8 @@ use App\Http\Requests\StoreBlogRequest;
 use App\Http\Requests\UpdateBlogRequest;
 use App\Models\Comment;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
 
 class BlogController extends Controller
 {
@@ -41,10 +43,28 @@ class BlogController extends Controller
      */
     public function store(StoreBlogRequest $request)
     {
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('public/posts');
+            $storagepath = Storage::path($path);
+            $img = Image::make($storagepath);
+            // resize image only width
+            $img->resize(300, null, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            // $img->resize(320, 320);
+            // insert a watermark
+            // $img->insert('public/watermark.png');
+            // save image in desired format
+            $img->save($storagepath);
+        } else {
+            $path = null;
+        }
+
         $data = [
             'user_id' => Auth::user()->id,
-            'title' => $request->title,
+            // 'title' => $request->title,
             'body' => $request->body,
+            'image' => $path,
         ];
 
         Blog::create($data);
@@ -105,17 +125,33 @@ class BlogController extends Controller
      * @param  \App\Models\Blog  $blog
      * @return \Illuminate\Http\Response
      */
-    public function update(UpdateBlogRequest $request, $id)
+    public function update(UpdateBlogRequest $request, $id, Blog $blog)
     {
-
-        $update = Blog::find($id);
-        if($update->user_id == Auth::user()->id || Auth::user()->role == 2){
-            $update->title = $request->title;
-            $update->body = $request->body;
-            $update->save();
-            return back()->with('message','Blog Update Successfully!!!');
+        $blog = Blog::find($id);
+        if($blog->user_id == Auth::user()->id || Auth::user()->role == 2){
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('public/posts');
+                $storagepath = Storage::path($path);
+                $img = Image::make($storagepath);
+                $img->resize(300, null, function ($constraint) {
+                    $constraint->aspectRatio();
+                });
+                $img->save($storagepath);
+                if($blog->image != null){
+                    Storage::delete($blog->image);
+                }
+            } else {
+                $path = $blog->image;
+            }
+            $data = [
+                'user_id' => Auth::user()->id,
+                'body' => $request->body,
+                'image' => $path,
+            ];
+            $blog->update($data);
+            return redirect()->route('blog.home')->with('message','Blog Update Successfully!!!');
         }else{
-            return back()->with('message','You are not authorized to update this blog!!!');
+            return back()->with('message','You are not authorized to edit this blog!!!');
         }
     }
 
@@ -138,7 +174,6 @@ class BlogController extends Controller
     {
         $blog = Blog::find($id);
         $blog->delete();
-
         return redirect()->route('blog.home')->with('message','Blog Delete Successfully!!!');
     }
 
@@ -150,7 +185,6 @@ class BlogController extends Controller
     public function trashed()
     {
         $blogs = Blog::onlyTrashed()->get();
-
         return view('blog.trashed', compact('blogs'))->with('user', Auth::user());
     }
 
@@ -164,7 +198,6 @@ class BlogController extends Controller
     {
         $blog = Blog::onlyTrashed()->findOrFail($id);
         $blog->restore();
-
         return back()->with('message','Blog Restore Successfully!!!');
     }
 
@@ -178,7 +211,6 @@ class BlogController extends Controller
     {
         $blog = Blog::onlyTrashed()->findOrFail($id);
         $blog->forceDelete();
-
         return back()->with('message','Blog Force Delete Successfully!!!');
     }
 
@@ -212,6 +244,5 @@ class BlogController extends Controller
             return back()->with('message','You are not authorized to hide/show this blog!!!');
         }
     }
-
 
 }

@@ -11,8 +11,8 @@ class Blog extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = [
         'user_id',
-        'title',
         'body',
+        'image',
     ];
     /**
      * Get the user that owns the blog.
